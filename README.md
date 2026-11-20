@@ -1,6 +1,16 @@
 # Slope Lens 3D — presentation
 
-An eight-slide website for IC202P Design Practicum, Group 26, IIT Mandi. The presentation explains the field problem, six landslide categories, dataset, classification method, reported evaluation, an actual output example, and next steps.
+An eight-slide website for IC202P Design Practicum, Group 26, IIT Mandi, with a continuous study view and contextual technical chapters. The slides explain the field problem, six landslide categories, dataset, classification method, reported evaluation, measurement geometry, actual output, and next steps.
+
+## Technical depth
+
+Use **Theory** for a detailed explanation of the current slide, or **Study view** for all eight chapters in a continuous reading layout. These add roughly 3,200 words of project theory, equations, data tables, methodological choices, source links and documented limitations. Speaker notes explain how to present the material.
+
+- Select any category on slide 3 to inspect its mechanism, field clues, class counts, test recall and precision.
+- Slide 5 distinguishes frozen representations from trained class-balanced logistic-regression heads, including feature dimensions and probability averaging.
+- Slide 6 switches between model comparison, measured confidence–coverage trade-offs, and per-class recall. Its slider selects reported out-of-fold thresholds; it does not run new experiments. Held-out system results alongside it remain fixed at the shipped 0.60 operating point.
+- Slide 7 walks through outline, depth, scale, plane geometry and Monte Carlo ranges. A second tab preserves the actual poster output. Its theory chapter includes a scale-multiplier illustration, explicitly separate from the project's measurement output.
+- Study chapters cover geotechnical background, leakage control, regularisation, augmentation, evaluation denominators, Bayesian field questions, multiview capture and the validation roadmap.
 
 ## Present locally
 
@@ -20,6 +30,8 @@ Open http://127.0.0.1:4387. You can also open `dist/index.html` directly for an 
 | F | Fullscreen |
 | O | Slide overview |
 | N | Speaker notes (visible on the same screen) |
+| T | Contextual theory chapter |
+| S | Toggle continuous study view |
 | M | Pause or resume motion |
 | B / Escape | Blank screen / restore |
 | P or Ctrl+P | Print all eight slides |
@@ -54,4 +66,6 @@ Poster imagery and the poster PDF were supplied for this presentation. No additi
 
 ## Verification
 
-`npm run build` checks structure, assets and navigation/state behaviour. Syntax is checked with `node --check`. Browser visual verification could not be completed in this environment: the in-app browser timed out on localhost, and Windows automation stopped because it could not verify the current browser URL. Before a live event, open the site on the presentation computer and check fullscreen, slide 7's output image, and print preview.
+`npm run build` checks the eight-slide structure, assets and controller contracts, including navigation, modal behaviour, study mode, tabs, measured threshold values, motion, print state and touch. These use a minimal DOM contract and do not replace browser layout checks. The expanded site was also reviewed in the browser, including the interactive threshold chart, measurement stages, theory panel, scale illustration and study view. Print styles are included; physical projector and printer behaviour should be checked on the event equipment.
+
+Edit `dist/content.js` for the technical chapters, class evidence, threshold table and stage descriptions. `dist/app.js` handles the controls, and `dist/depth.css` styles the expanded content. All content and interactions run offline; linked external evidence requires internet.

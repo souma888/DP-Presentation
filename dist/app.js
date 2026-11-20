@@ -1,60 +1,282 @@
-const $=s=>document.querySelector(s);
-const slides=[...document.querySelectorAll('.slide')];
-const notes=[
- 'Introduce Slope Lens 3D as an IC202P field decision-support prototype. The starting point is a ground-level phone photo taken from a safe location. Classification, qualified size estimates and a field record are implemented. The interactive 3D viewer remains proposed.',
- 'Use the mountain cross-section to explain the viewpoint. An engineer needs the crown, face and deposit in context. The app supports observation and documentation; it cannot determine whether approaching the slope is safe or see hazards outside the photo.',
- 'Walk through the movement mechanisms: detached blocks; a rotating slump; a planar slide; coarse material flowing in a channel; fine wet material forming a lobe; and no visible failure. These are six practical ground-photo categories, not the entire Hungr taxonomy. Stable-looking photos are not a safety certification.',
- 'Explain why a split by site matters: two photos of the same landslide would otherwise inflate evaluation. Of 4,954 collected images, 1,325 were usable. The usable split is 908/154/263. The poster says human-labelled, but the report explicitly says every current label is AI-made. Follow the report and disclose the pending blind human review.',
- 'The app averages three frozen-feature probes: DINOv2-base, DINOv2-large and SigLIP2-base, each with linear heads. Features stay frozen because the labelled dataset is small. Selection uses train and validation only, with site-balanced CV and distribution shifts. The 0.60 threshold was selected to reach 85% CV accuracy with at least 50% coverage. Current app behaviour still shows unreliable results with a warning when photo quality fails.',
- 'Keep the denominators explicit. The classifier scores 80.6% accuracy and 0.784 macro-F1 on 263 usable photos. In the full pipeline, 69.2% of usable photos receive a confident answer and accuracy on those is 85.7%. Across all 1,008 photos, including 745 unusable ones, precision is 60.5%. The photo check is the weak link. These scores measure agreement with AI labels; only 20 test photos are real phone images.',
- 'This is an actual output reproduced from the poster, not a live classifier running in this deck. The 78% is one photo’s confidence, not overall test accuracy. Explain outline, depth, scale and plane geometry. These displayed numbers are estimates; there are no verified ground-truth field sizes. In the app, 90% ranges communicate uncertainty. Medium depth trust and fair photo quality should be acknowledged.',
- 'Close on a concrete next experiment: obtain blind human labels and 30–50 local phone photos, improve the photo check and scarce classes, and validate absolute measurements. The interactive 3D viewer is future scope. Thank the team and mentor, then invite questions. Source and poster links are available here.'
+const $ = selector => document.querySelector(selector);
+const $$ = selector => [...document.querySelectorAll(selector)];
+const slides = $$('.slide');
+let index = 0;
+let studyMode = false;
+let studyObserver;
+
+function references(chapter) {
+  return `<div class="reading-references"><span class="small-label">SOURCES · PROJECT SNAPSHOT 74ba236 + BACKGROUND</span>${chapter.refs.map(([path, title]) => `<a href="${path.startsWith('https://') ? path : sourceRoot + path}" target="_blank" rel="noopener">${title}</a>`).join('')}</div>`;
+}
+
+function chapterMarkup(chapter) {
+  return `<p class="reading-lead">${chapter.lead}</p>${chapter.html}${references(chapter)}`;
+}
+
+// Contextual panels and study chapters share the same project evidence.
+slides.forEach((slide, i) => {
+  const stage = document.createElement('div');
+  stage.className = 'slide-stage';
+  while (slide.firstChild) stage.append(slide.firstChild);
+  slide.append(stage);
+  const reading = document.createElement('div');
+  reading.className = 'study-detail reading-body';
+  reading.innerHTML = `<div class="study-heading"><span class="small-label">${chapterData[i].label} / TECHNICAL READING</span><h3>${chapterData[i].title}</h3></div>${chapterMarkup(chapterData[i])}`;
+  slide.append(reading);
+});
+
+$('#taxonomy').innerHTML = classData.map((c, i) => `
+  <button class="type" data-class="${i}" aria-label="Explore ${c.name}">
+    <svg viewBox="0 0 112 100" aria-hidden="true">${c.svg}</svg>
+    <div><h3>${c.name}</h3><p>${c.cue}</p><span class="type-meta">${c.train + c.val + c.test} photos <i>·</i> inspect evidence</span></div>
+  </button>`).join('');
+
+$('#dots').innerHTML = slides.map((s, i) => `<button data-slide="${i}" aria-label="Slide ${i + 1}: ${s.dataset.title}"></button>`).join('');
+const overviewArt = [
+  '<img src="assets/slope.png" alt="">',
+  '<svg viewBox="0 0 200 70"><path d="M0 65 55 30 80 12 115 43 140 55 200 65M0 70Q80 10 140 60"/></svg>',
+  '<svg viewBox="0 0 200 70"><path d="M5 60 35 10 65 60M70 60 100 10 130 60M135 60 165 10 195 60"/></svg>',
+  '<svg viewBox="0 0 200 70"><path stroke-width="25" d="M10 35h110m8 0h20m8 0h34"/></svg>',
+  '<svg viewBox="0 0 200 70"><path d="M20 35h35V12h70v46H55V35m70 0h55M55 35h70"/></svg>',
+  '<svg viewBox="0 0 200 70"><path stroke-width="8" d="M20 15h150M20 35h120M20 55h62"/></svg>',
+  '<img src="assets/output.jpg" alt="">',
+  '<svg viewBox="0 0 200 70"><path d="M10 65 70 10 110 52 140 24 195 65"/></svg>'
 ];
-const types=[
- ['Rock fall / topple','Detached blocks, a steep face and talus at the base.','<path d="M10 86 40 50 52 12 77 12 78 85"/><path class="moving" d="m62 35 14-4 7 13-13 9Zm21 24 12 2 4 10-12 5Z"/><path d="m54 88 9-11 14 11 11-5 13 6"/>'],
- ['Rotational slide','A curved scarp, back-tilted blocks and a bulging toe.','<path d="M8 86 33 28 65 22 101 85M24 47q30 49 69 35"/><path class="moving" d="m35 39 28-9 17 36-25 8Z"/>'],
- ['Translational slide','A sheet of material moves along a planar surface.','<path d="M8 88 37 16 68 43 102 88M27 52l66 31"/><path class="moving" d="m43 29 40 31-8 12-40-31Z"/>'],
- ['Debris flow','Coarse, mixed material follows a channel into a fan.','<path d="m9 83 32-64 20 13 18-15 25 66"/><path class="moving" d="M55 32q-14 19 3 25t-8 20L30 88h58L63 73q15-20 1-27Z"/><path d="m49 61 3 2m8 17 3 3m-20 1 3 2"/>'],
- ['Earth / mud flow','Fine wet material forms a tongue or rounded lobe.','<path d="M8 87 37 24 69 32 101 86"/><path class="moving" d="M45 36q-10 15 0 24t-4 16q-16 15 13 14t17-17Q53 51 63 38Z"/>'],
- ['No visible landslide','A slope, cliff or cut without visible slope failure.','<path d="M8 87 34 48 61 20 102 87M18 87h80M35 47l17 12 12-35M61 60l23 5"/><path d="M19 67v-17m-7 9 7-12 7 12M88 81V64m-7 9 7-12 7 12"/>']
-];
-$('#taxonomy').innerHTML=types.map(([name,desc,svg])=>`<article class="type"><svg viewBox="0 0 112 100" role="img" aria-label="${name} movement schematic">${svg}</svg><div><h3>${name}</h3><p>${desc}</p></div></article>`).join('');
-$('#dots').innerHTML=slides.map((s,i)=>`<button data-slide="${i}" aria-label="Slide ${i+1}: ${s.dataset.title}"></button>`).join('');
-$('#overviewGrid').innerHTML=slides.map((s,i)=>`<button data-slide="${i}"><span class="overview-number">0${i+1}</span>${s.dataset.title}</button>`).join('');
-const thumbs = [
- '<img src="assets/slope.png" alt="">',
- '<svg viewBox="0 0 200 70"><path d="M0 65 55 30 80 12 115 43 140 55 200 65M0 70Q80 10 140 60"/></svg>',
- '<svg viewBox="0 0 200 70"><path d="M5 60 35 10 65 60M70 60 100 10 130 60M135 60 165 10 195 60"/></svg>',
- '<svg viewBox="0 0 200 70"><path stroke-width="25" d="M10 35h110m8 0h20m8 0h34"/></svg>',
- '<svg viewBox="0 0 200 70"><path d="M20 35h35V12h70v46H55V35m70 0h55M55 35h70"/></svg>',
- '<svg viewBox="0 0 200 70"><path stroke-width="8" d="M20 15h150M20 35h120M20 55h62"/></svg>',
- '<img src="assets/output.jpg" alt="">',
- '<svg viewBox="0 0 200 70"><path d="M10 65 70 10 110 52 140 24 195 65"/></svg>'
-];
-document.querySelectorAll('#overviewGrid button').forEach((button,i) => button.insertAdjacentHTML('afterbegin','<span class="overview-thumb">'+thumbs[i]+'</span>'));
+$('#overviewGrid').innerHTML = slides.map((s, i) => `<button data-slide="${i}"><span class="overview-thumb" aria-hidden="true">${overviewArt[i]}</span><span class="overview-number">0${i + 1}</span>${s.dataset.title}</button>`).join('');
+$('#theoryChapters').innerHTML = chapterData.map((c, i) => `<button data-theory-chapter="${i}" aria-label="Theory chapter ${i + 1}: ${c.title}">${String(i + 1).padStart(2, '0')} <span>${c.label.toLowerCase()}</span></button>`).join('');
+
+function updateChrome() {
+  $$('[data-slide]').forEach(button => button.setAttribute('aria-current', String(Number(button.dataset.slide) === index)));
+  $('#current').textContent = String(index + 1).padStart(2, '0');
+  $('#slideTitle').textContent = slides[index].dataset.title;
+  $('#progress').style.width = `${(index + 1) / slides.length * 100}%`;
+  $('#prev').disabled = index === 0;
+  $('#next').disabled = index === slides.length - 1;
+  $('#noteContent').textContent = chapterData[index].notes;
+  document.title = `${index + 1}/8 · ${slides[index].dataset.title} · Slope Lens 3D`;
+}
+
+function go(number, replace = false) {
+  index = Math.max(0, Math.min(slides.length - 1, number));
+  slides.forEach((slide, i) => {
+    slide.classList.toggle('active', i === index);
+    slide.inert = !studyMode && i !== index;
+    slide.setAttribute('aria-hidden', String(!studyMode && i !== index));
+    slide.setAttribute('tabindex', '-1');
+    if (i === index && !studyMode) slide.scrollTop = 0;
+  });
+  updateChrome();
+  if (document.activeElement?.closest('.slide')?.inert) slides[index].focus({ preventScroll: true });
+  if (studyMode) slides[index].scrollIntoView({ behavior: 'instant', block: 'start' });
+  $('#announcement').textContent = `Slide ${index + 1} of 8: ${slides[index].dataset.title}`;
+  const hash = `#${index + 1}`;
+  if (location.hash !== hash) history[replace ? 'replaceState' : 'pushState'](null, '', hash);
+}
+
+function fromHash() {
+  const number = Number(location.hash.slice(1));
+  go(Number.isInteger(number) && number >= 1 && number <= 8 ? number - 1 : 0, true);
+}
+
+function toggleStudy() {
+  studyMode = !studyMode;
+  document.body.classList.toggle('study-mode', studyMode);
+  $('#studyBtn').textContent = studyMode ? 'Present slides' : 'Study view';
+  $('#studyBtn').setAttribute('aria-pressed', String(studyMode));
+  if (studyObserver) studyObserver.disconnect();
+  go(index, true);
+  if (studyMode) {
+    studyObserver = new IntersectionObserver(entries => {
+      const visible = entries.filter(entry => entry.isIntersecting);
+      if (visible.length) {
+        index = slides.indexOf(visible[visible.length - 1].target);
+        updateChrome();
+      }
+    }, { rootMargin: '-90px 0px -70% 0px', threshold: 0 });
+    slides.forEach(slide => studyObserver.observe(slide));
+  }
+}
+
+function renderTheory(number) {
+  const chapter = chapterData[number];
+  $('#theoryLabel').textContent = `${String(number + 1).padStart(2, '0')} / ${chapter.label}`;
+  $('#theoryTitle').textContent = chapter.title;
+  $('#theoryBody').innerHTML = chapterMarkup(chapter);
+  $('#theoryBody').scrollTop = 0;
+  $$('[data-theory-chapter]').forEach(button => button.setAttribute('aria-current', String(Number(button.dataset.theoryChapter) === number)));
+}
+
+function openTheory() {
+  renderTheory(index);
+  $('#theoryDialog').showModal();
+}
+
+function showClass(number) {
+  const c = classData[number];
+  $('#classFamily').textContent = `${c.family} / HUNGR 2014 GROUP`;
+  $('#classBody').innerHTML = `
+    <div class="class-detail-heading"><svg viewBox="0 0 112 100" aria-hidden="true">${c.svg}</svg><div><h3 id="classTitle">${c.name}</h3><p>${c.mechanism}</p></div></div>
+    <div class="class-detail-copy"><article><h4>Field evidence</h4><p>${c.inspect}</p></article><article><h4>Where interpretation breaks down</h4><p>${c.confusion}</p></article></div>
+    <div class="class-detail-stats"><div><strong>${c.train + c.val + c.test}</strong><span>total usable photos</span></div><div><strong>${c.test}</strong><span>test photos</span></div><div><strong>${c.recall}%</strong><span>test recall</span></div><div><strong>${c.precision}%</strong><span>test precision</span></div></div>
+    <p class="footnote">Reported test agreement with AI annotations. Samples are site-disjoint; these numbers are not expert-verified field accuracy.</p>
+    <a class="detail-source" href="${sourceRoot}report.md#42-untouched-test-split-263-usable-photos-152-sites-resultssummarymd" target="_blank" rel="noopener">Read the source evidence</a>`;
+  $('#classDialog').showModal();
+}
+
+// Arrow keys stay within a tablist instead of advancing the deck.
+function selectTab(button, kind) {
+  const tabs = [...button.closest('[role="tablist"]').querySelectorAll('[role="tab"]')];
+  tabs.forEach(tab => {
+    const selected = tab === button;
+    tab.setAttribute('aria-selected', String(selected));
+    tab.tabIndex = selected ? 0 : -1;
+    const panel = tab.getAttribute('aria-controls');
+    if (panel && kind !== 'stage') document.getElementById(panel).hidden = !selected;
+  });
+  if (kind === 'stage') renderStage(Number(button.dataset.stage));
+}
+
+function renderRisk() {
+  const r = riskData[Number($('#riskSlider').value)];
+  $('#riskThreshold').textContent = r.threshold.toFixed(2);
+  $('#riskSlider').setAttribute('aria-valuetext', `Threshold ${r.threshold.toFixed(2)}: ${r.coverage}% coverage, ${r.accuracy}% answered accuracy`);
+  $('#riskCoverage').textContent = `${r.coverage}%`;
+  $('#riskAccuracy').textContent = `${r.accuracy}%`;
+  $('#riskF1').textContent = r.f1.toFixed(3);
+  const meetsRule = r.accuracy >= 85 && r.coverage >= 50;
+  $('#riskExplanation').textContent = r.threshold === 0.6
+    ? 'Selected operating point: the smallest reported threshold meeting ≥85% accuracy with ≥50% coverage.'
+    : meetsRule
+      ? 'Meets the accuracy and coverage targets, but answers fewer photos than the selected 0.60 threshold.'
+      : r.coverage < 50
+        ? 'Higher answered accuracy, but coverage falls below the 50% selection requirement.'
+        : 'Covers more photos, but answered accuracy stays below the 85% selection requirement.';
+  const x = c => 45 + c * 4.6;
+  const y = a => 135 - (a - 70) * 3.7;
+  $('#riskChart').innerHTML = `
+    <g class="risk-grid"><path d="M45 25H505M45 62H505M45 99H505M45 136H505"/><text x="5" y="29">100%</text><text x="12" y="66">90%</text><text x="12" y="103">80%</text><text x="40" y="157">0</text><text x="252" y="157">COVERAGE</text><text x="470" y="157">100%</text></g>
+    <path class="risk-target" d="M275 20V136M45 ${y(85)}H505"/>
+    <polyline class="risk-line" points="${riskData.map(d => `${x(d.coverage)},${y(d.accuracy)}`).join(' ')}"/>
+    ${riskData.map(d => `<circle cx="${x(d.coverage)}" cy="${y(d.accuracy)}" r="3.5" class="risk-point"/>`).join('')}
+    <circle cx="${x(r.coverage)}" cy="${y(r.accuracy)}" r="8" class="risk-selected"/>
+    <text class="risk-point-label" x="${x(r.coverage) - 18}" y="${Math.max(13, y(r.accuracy) - 15)}">t=${r.threshold.toFixed(2)}</text>`;
+}
+
+$('#recallChart').innerHTML = classData.map(c => `<div class="recall-row"><div><span>${c.name}</span><small>n = ${c.test}</small></div><div class="recall-track"><i style="width:${c.recall}%"></i></div><strong>${c.recall}%</strong></div>`).join('');
+$('#stageControls').innerHTML = measurementStages.map((stage, i) => `<button id="stage-tab-${i}" role="tab" data-stage="${i}" aria-selected="${i === 0}" tabindex="${i === 0 ? 0 : -1}" aria-controls="stageDescription">${stage.name}</button>`).join('');
+const stageDescription = document.createElement('div');
+stageDescription.id = 'stageDescription';
+stageDescription.setAttribute('role', 'tabpanel');
+['#stageNumber', '#stageTitle', '#stageText', '#stageFormula', '#stageNote'].forEach(selector => stageDescription.append($(selector)));
+$('.stage-detail').append(stageDescription);
+
+function renderStage(number) {
+  const stage = measurementStages[number];
+  $('#stageNumber').textContent = `STAGE ${number + 1} / 5`;
+  $('#stageTitle').textContent = stage.title;
+  $('#stageText').textContent = stage.text;
+  $('#stageFormula').textContent = stage.formula;
+  $('#stageNote').textContent = stage.note;
+  $('#stageDescription').setAttribute('aria-labelledby', `stage-tab-${number}`);
+  $('.geometry-illustration').dataset.stage = number;
+}
+
+$('#prev').onclick = () => go(index - 1);
+$('#next').onclick = () => go(index + 1);
+$('[data-next]').onclick = () => go(index + 1);
+$$('[data-slide]').forEach(button => button.onclick = () => { go(Number(button.dataset.slide)); $('#overview').close(); });
+$$('[data-class]').forEach(button => button.onclick = () => showClass(Number(button.dataset.class)));
+$$('[data-theory-chapter]').forEach(button => button.onclick = () => renderTheory(Number(button.dataset.theoryChapter)));
+$('#overviewBtn').onclick = () => $('#overview').showModal();
+$('#sourcesBtn').onclick = () => $('#sources').showModal();
+$('#theoryBtn').onclick = openTheory;
+$('#footerTheory').onclick = openTheory;
+$('#studyBtn').onclick = toggleStudy;
+$$('[data-close]').forEach(button => button.onclick = () => button.closest('dialog').close());
+$('#riskSlider').addEventListener('input', renderRisk);
+document.addEventListener('input', event => {
+  if (!event.target.matches('[data-scale-input]')) return;
+  const lab = event.target.closest('[data-scale-lab]');
+  const scale = Number(event.target.value) / 100;
+  lab.querySelector('[data-scale-value]').textContent = `${scale.toFixed(2)}×`;
+  lab.querySelector('[data-scale-length]').textContent = `${scale.toFixed(2)}×`;
+  lab.querySelector('[data-scale-area]').textContent = `${(scale ** 2).toFixed(2)}×`;
+  lab.querySelector('[data-scale-volume]').textContent = `${(scale ** 3).toFixed(2)}×`;
+});
+$$('[data-evidence]').forEach(button => button.onclick = () => selectTab(button, 'evidence'));
+$$('[data-measure-view]').forEach(button => button.onclick = () => selectTab(button, 'measurement'));
+$$('[data-stage]').forEach(button => button.onclick = () => selectTab(button, 'stage'));
+
+function toggleNotes(force) {
+  const open = typeof force === 'boolean' ? force : $('#speakerNotes').hidden;
+  $('#speakerNotes').hidden = !open;
+  $('#notesBtn').setAttribute('aria-pressed', String(open));
+}
+$('#notesBtn').onclick = () => toggleNotes();
+$('#closeNotes').onclick = () => toggleNotes(false);
+async function fullscreen() {
+  try {
+    if (document.fullscreenElement) await document.exitFullscreen();
+    else await document.documentElement.requestFullscreen();
+  } catch { $('#announcement').textContent = 'Fullscreen unavailable here. Use your browser’s fullscreen control.'; }
+}
+$('#fullBtn').onclick = fullscreen;
+
 const motionPreference = matchMedia('(prefers-reduced-motion: reduce)');
 function setMotion(paused) {
- document.body.classList.toggle('motion-paused',paused);
- $('#motionBtn').setAttribute('aria-pressed',String(paused));
- $('#motionBtn').textContent=paused?'Motion off':'Motion';
+  document.body.classList.toggle('motion-paused', paused);
+  $('#motionBtn').setAttribute('aria-pressed', String(paused));
+  $('#motionBtn').textContent = paused ? 'Motion off' : 'Motion';
 }
 setMotion(motionPreference.matches);
-$('#motionBtn').onclick=()=>setMotion(!document.body.classList.contains('motion-paused'));
-motionPreference.addEventListener('change', e=>setMotion(e.matches));
-$('#printBtn').onclick=()=>window.print();
-let index=0;
-function go(n,replace=false){index=Math.max(0,Math.min(7,n));slides.forEach((s,i)=>{s.classList.toggle('active',i===index);s.inert=i!==index;s.setAttribute('aria-hidden',String(i!==index));s.setAttribute('tabindex','-1');if(i===index)s.scrollTop=0;});document.querySelectorAll('[data-slide]').forEach(b=>b.setAttribute('aria-current',String(Number(b.dataset.slide)===index)));$('#current').textContent=String(index+1).padStart(2,'0');$('#slideTitle').textContent=slides[index].dataset.title;$('#progress').style.width=`${(index+1)/8*100}%`;if(document.activeElement?.closest('.slide')?.inert)slides[index].focus({preventScroll:true});$('#prev').disabled=index===0;$('#next').disabled=index===7;$('#noteContent').textContent=notes[index];document.title=`${index+1}/8 · ${slides[index].dataset.title} · Slope Lens 3D`;$('#announcement').textContent=`Slide ${index+1} of 8: ${slides[index].dataset.title}`;const hash=`#${index+1}`;if(location.hash!==hash)history[replace?'replaceState':'pushState'](null,'',hash);}
-function fromHash(){const n=Number(location.hash.slice(1));go(Number.isInteger(n)&&n>=1&&n<=8?n-1:0,true)}
-$('#prev').onclick=()=>go(index-1);$('#next').onclick=()=>go(index+1);document.querySelector('[data-next]').onclick=()=>go(index+1);
-document.querySelectorAll('[data-slide]').forEach(b=>b.onclick=()=>{go(Number(b.dataset.slide));$('#overview').close()});
-$('#overviewBtn').onclick=()=>$('#overview').showModal();$('#sourcesBtn').onclick=()=>$('#sources').showModal();document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>b.closest('dialog').close());
-const toggleNotes=()=>{$('#speakerNotes').hidden=!$('#speakerNotes').hidden;$('#notesBtn').setAttribute('aria-pressed',String(!$('#speakerNotes').hidden))};$('#notesBtn').onclick=toggleNotes;$('#closeNotes').onclick=toggleNotes;
-async function fullscreen(){try{if(document.fullscreenElement)await document.exitFullscreen();else await document.documentElement.requestFullscreen()}catch{$('#announcement').textContent='Fullscreen unavailable in this browser. Use the browser fullscreen control.'}}
-$('#fullBtn').onclick=fullscreen;
-document.addEventListener('keydown',e=>{if(e.altKey||e.ctrlKey||e.metaKey||/INPUT|TEXTAREA|SELECT/.test(e.target.tagName))return;if(e.key==='Escape'){$('#blank').hidden=true;$('#speakerNotes').hidden=true;$('#notesBtn').setAttribute('aria-pressed','false');return}if(document.querySelector('dialog[open]'))return;if(!$('#blank').hidden){if(e.key.toLowerCase()==='b')$('#blank').hidden=true;return}if(e.target.closest('button,a')&&(e.key===' '||e.key==='Enter'))return;const k=e.key.toLowerCase();if(['arrowright','arrowdown','pagedown',' ','enter'].includes(k)){e.preventDefault();go(index+1)}else if(['arrowleft','arrowup','pageup'].includes(k)){e.preventDefault();go(index-1)}else if(k==='home')go(0);else if(k==='end')go(7);else if(/^[1-8]$/.test(k))go(Number(k)-1);else if(k==='f')fullscreen();else if(k==='o')$('#overview').showModal();else if(k==='n')toggleNotes();else if(k==='m')$('#motionBtn').click();else if(k==='p')window.print();else if(k==='b')$('#blank').hidden=false;});
-let touch=null;$('#deck').addEventListener('touchstart',e=>{touch={x:e.touches[0].clientX,y:e.touches[0].clientY}},{passive:true});$('#deck').addEventListener('touchend',e=>{if(!touch||e.target.closest('a,button'))return;const dx=e.changedTouches[0].clientX-touch.x,dy=e.changedTouches[0].clientY-touch.y;if(Math.abs(dx)>70&&Math.abs(dx)>Math.abs(dy)*1.6)go(index+(dx<0?1:-1));touch=null},{passive:true});
-window.addEventListener('hashchange',fromHash);fromHash();
+$('#motionBtn').onclick = () => setMotion(!document.body.classList.contains('motion-paused'));
+motionPreference.addEventListener('change', event => setMotion(event.matches));
+$('#printBtn').onclick = () => window.print();
 
-// Print every slide, including those normally removed from keyboard navigation.
-window.addEventListener('beforeprint',()=>slides.forEach(s=>{s.inert=false;s.removeAttribute('aria-hidden')}));
-window.addEventListener('afterprint',()=>go(index,true));
+document.addEventListener('keydown', event => {
+  const key = event.key.toLowerCase();
+  if (event.altKey || event.ctrlKey || event.metaKey) return;
+  if (event.target.closest('[role="tablist"]') && ['arrowleft', 'arrowright', 'home', 'end'].includes(key)) {
+    const tabs = [...event.target.closest('[role="tablist"]').querySelectorAll('[role="tab"]')];
+    const current = tabs.indexOf(event.target);
+    const next = key === 'home' ? 0 : key === 'end' ? tabs.length - 1 : (current + (key === 'arrowright' ? 1 : -1) + tabs.length) % tabs.length;
+    event.preventDefault(); tabs[next].focus(); tabs[next].click(); return;
+  }
+  if (event.key === 'Escape') { $('#blank').hidden = true; toggleNotes(false); return; }
+  if (/INPUT|TEXTAREA|SELECT/.test(event.target.tagName) || document.querySelector('dialog[open]')) return;
+  if (!$('#blank').hidden) { if (key === 'b') $('#blank').hidden = true; return; }
+  if (event.target.closest('button,a') && [' ', 'enter'].includes(key)) return;
+  if (key === 't') openTheory();
+  else if (key === 's') toggleStudy();
+  else if (key === 'f') fullscreen();
+  else if (key === 'o') $('#overview').showModal();
+  else if (key === 'n') toggleNotes();
+  else if (key === 'm') $('#motionBtn').click();
+  else if (key === 'p') window.print();
+  else if (key === 'b') $('#blank').hidden = false;
+  else if (/^[1-8]$/.test(key)) go(Number(key) - 1);
+  else if (studyMode) return;
+  else if (['arrowright', 'arrowdown', 'pagedown', ' ', 'enter'].includes(key)) { event.preventDefault(); go(index + 1); }
+  else if (['arrowleft', 'arrowup', 'pageup'].includes(key)) { event.preventDefault(); go(index - 1); }
+  else if (key === 'home') go(0);
+  else if (key === 'end') go(7);
+});
+
+let touchStart;
+$('#deck').addEventListener('touchstart', event => {
+  if (event.target.closest('input,button,a,[role="tablist"]')) return;
+  touchStart = { x: event.touches[0].clientX, y: event.touches[0].clientY };
+}, { passive: true });
+$('#deck').addEventListener('touchend', event => {
+  if (!touchStart || studyMode || event.target.closest('input,button,a')) { touchStart = null; return; }
+  const dx = event.changedTouches[0].clientX - touchStart.x;
+  const dy = event.changedTouches[0].clientY - touchStart.y;
+  if (Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy) * 1.6) go(index + (dx < 0 ? 1 : -1));
+  touchStart = null;
+}, { passive: true });
+renderRisk();
+renderStage(0);
+window.addEventListener('hashchange', fromHash);
+window.addEventListener('beforeprint', () => slides.forEach(slide => { slide.inert = false; slide.removeAttribute('aria-hidden'); }));
+window.addEventListener('afterprint', () => go(index, true));
+fromHash();

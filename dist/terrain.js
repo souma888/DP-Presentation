@@ -21,7 +21,7 @@
     + .04 * Math.sin(x * 9 + z * 3) * Math.cos(z * 6);
   function draw(time = 0) {
     frame = null;
-    if (canvas.hidden || document.hidden || !panel.closest('.slide').classList.contains('active')) return;
+    if (canvas.hidden || document.hidden || (!panel.closest('.slide').classList.contains('active') && !document.body.classList.contains('study-mode'))) return;
     const rect = canvas.getBoundingClientRect();
     if (!rect.width || !rect.height) return;
     const dpr = Math.min(devicePixelRatio || 1, 2);
