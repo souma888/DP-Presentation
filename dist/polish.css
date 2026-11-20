@@ -1,0 +1,49 @@
+/* Presentation-specific refinements, kept separate from the base layouts. */
+.terrain-controls{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 12px}
+.terrain-controls>div{display:flex;gap:3px}
+.terrain-controls button{padding:8px 11px;font-size:14px;border-color:transparent;color:var(--muted)}
+.terrain-controls button[aria-pressed=true]{background:#a9c6a018;border-color:#a9c6a04d;color:var(--ink)}
+.terrain-controls>span{font:11px Consolas,monospace;letter-spacing:.07em;color:var(--accent)}
+.terrain-canvas{display:block;width:100%;height:33vh;min-height:180px;max-height:350px}
+.terrain-panel .caption{min-height:36px;font-size:12px}
+.motion-paused *,.motion-paused *::before,.motion-paused *::after{animation-play-state:paused!important;transition-duration:0s!important}
+.slide:not(.active) *,.slide:not(.active) *::before,.slide:not(.active) *::after{animation-play-state:paused!important}
+.slide.active>h2,.slide.active>.eyebrow{animation:arrive .7s both}
+.slide.active>h2{animation-delay:.08s}
+.slide.active>.problem-layout,.slide.active>.data-layout,.slide.active>.pipeline,.slide.active>.results-layout,.slide.active>.output-layout{animation:arrive .8s .16s both}
+.active .type{animation:arrive .65s both}
+.active .type:nth-child(2){animation-delay:.07s}.active .type:nth-child(3){animation-delay:.14s}.active .type:nth-child(4){animation-delay:.21s}.active .type:nth-child(5){animation-delay:.28s}.active .type:nth-child(6){animation-delay:.35s}
+.type:nth-child(2) .moving{animation-name:slump}.type:nth-child(3) .moving{animation-name:slide-plane}.type:nth-child(4) .moving,.type:nth-child(5) .moving{animation-name:flow}
+.overview-thumb{display:block;height:60px;margin:0 0 15px;overflow:hidden;background:#294b39;position:relative}
+.overview-thumb img{width:100%;height:100%;object-fit:cover;filter:saturate(.6);opacity:.8}
+.overview-thumb svg{width:100%;height:100%;stroke:#b7c99c;fill:none;stroke-width:1.3}
+#overviewGrid button{padding:12px;min-height:155px;font-size:14px}.overview-number{float:right;font-size:13px;margin:0 0 8px 10px}
+#overviewGrid button[aria-current=true]{border-color:var(--accent)}
+.type p,.output-verdict>p,.caution p,.next-steps>div{font-size:16px}
+.small-label,.camera-frame span,.method-strip b,.problem-points article>span,.confidence span{font-size:12px}
+.tools button,.resource-links,.resource-links .primary,.resource-links>button{font-size:14px}
+.measurements dt,.mini-prob,.geometry-strip,.credits li,.credits p,.credits li span{font-size:14px}
+.measurement-note,.footnote,.result-footer,.credits .credits-note{font-size:13px}
+.hero-bottom{font-size:12px}.source-row{font-size:16px}
+.output-photo img{object-fit:contain;background:#0c211b}
+.slide:focus{outline:none}
+@keyframes arrive{from{opacity:0;transform:translateY(15px)}to{opacity:1;transform:translateY(0)}}
+@keyframes slump{0%,25%,100%{transform:rotate(0)}65%{transform:rotate(12deg) translate(2px,4px)}}
+@keyframes slide-plane{0%,25%,100%{transform:translate(0,0)}65%{transform:translate(9px,7px)}}
+@keyframes flow{0%,25%,100%{transform:scaleY(1)}65%{transform:translateY(3px) scaleY(1.07)}}
+@media(max-width:1000px){.terrain-controls{flex-wrap:wrap}.terrain-controls>span{display:none}.type p{font-size:15px}.credits li{font-size:13px}.mini-prob{font-size:12px}}
+@media(max-width:700px){.tools #motionBtn{display:none}.terrain-canvas{height:240px}.type p{font-size:16px}.type{padding:20px 0}.mini-prob{font-size:12px}.output-layout{grid-template-columns:1fr}.output-photo img{height:300px}.output-verdict h3 br{display:none}.output-verdict h3{font-size:34px}.mini-prob{grid-template-columns:1.3fr 1fr 35px}.mini-prob i{display:block}.verdict-score span{display:inline;margin-left:10px}.hero{overflow:auto}.hero-copy{padding-bottom:85px}.hero-bottom{position:relative;bottom:auto;left:auto;right:auto;padding:0 6vw 22px}.source-row{font-size:14px}.type svg{height:90px}.small-label{font-size:12px}.measurements dt{font-size:14px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+@media print{
+ @page{size:320mm 180mm;margin:0}
+ html,body{width:320mm;height:auto}
+ .slide{width:320mm;height:180mm;min-height:0;padding:10mm 15mm;break-inside:avoid;animation:none!important}
+ .slide *{animation:none!important;transition:none!important}
+ .slide>h2{font-size:36px}.hero h1{font-size:64px}.hero-copy{padding:12mm 15mm}.hero-bottom{bottom:8mm}
+ .terrain-controls,.terrain-canvas{display:none!important}.terrain-panel svg{display:block!important;max-height:60mm}
+ .taxonomy .type{min-height:42mm;padding:10px 0}.type p{font-size:14px}
+ .data-layout,.results-layout{margin-top:6mm}.data-numbers strong{font-size:46px}
+ .output-layout{margin-top:6mm}.output-photo img{height:80mm}.measurements dl>div{padding:7px 0}
+ .closing h2{font-size:38px}.credits li{padding:6px 0}.next-steps>div{font-size:14px;padding:10px 0}
+ .caution{margin-top:5mm}.hero-photo{z-index:0}.hero-copy,.hero-bottom{position:relative;z-index:1}.hero-bottom{position:absolute}
+}
